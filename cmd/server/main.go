@@ -1,7 +1,7 @@
 package main
 
 import (
-	hellopb "awesomeProject/pkg/proto/api"
+	"awesomeProject/pkg/proto"
 	"context"
 	"fmt"
 	"google.golang.org/grpc"
@@ -14,19 +14,19 @@ import (
 )
 
 type HelloServiceServer struct {
-	hellopb.UnimplementedHelloServiceServer
+	proto.UnimplementedHelloServiceServer
 }
 
-func (s *HelloServiceServer) SayHello(ctx context.Context, req *hellopb.HelloRequest) (*hellopb.HelloReply, error) {
-	return &hellopb.HelloReply{
+func (s *HelloServiceServer) SayHello(ctx context.Context, req *proto.HelloRequest) (*proto.HelloReply, error) {
+	return &proto.HelloReply{
 		Message: fmt.Sprintf("Hello %s", req.GetName()),
 	}, nil
 }
 
-func (s *HelloServiceServer) HelloServerStream(req *hellopb.HelloRequest, stream hellopb.HelloService_HelloServerStreamServer) error {
+func (s *HelloServiceServer) HelloServerStream(req *proto.HelloRequest, stream proto.HelloService_HelloServerStreamServer) error {
 	resCount := 10
 	for i := 0; i < resCount; i++ {
-		if err := stream.Send(&hellopb.HelloReply{
+		if err := stream.Send(&proto.HelloReply{
 			Message: fmt.Sprintf("Hello %s %d", req.GetName(), i),
 		}); err != nil {
 			return err
@@ -50,7 +50,7 @@ func main() {
 
 	s := grpc.NewServer()
 
-	hellopb.RegisterHelloServiceServer(s, NewHelloServiceServer())
+	proto.RegisterHelloServiceServer(s, NewHelloServiceServer())
 
 	reflection.Register(s)
 

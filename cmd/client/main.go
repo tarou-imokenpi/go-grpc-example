@@ -1,7 +1,7 @@
 package main
 
 import (
-	hellopb "awesomeProject/pkg/proto/api"
+	"awesomeProject/pkg/proto"
 	"bufio"
 	"context"
 	"fmt"
@@ -13,7 +13,7 @@ import (
 
 var (
 	scanner *bufio.Scanner
-	client  hellopb.HelloServiceClient
+	client  proto.HelloServiceClient
 )
 
 func main() {
@@ -30,7 +30,7 @@ func main() {
 	}
 	defer conn.Close()
 
-	client = hellopb.NewHelloServiceClient(conn)
+	client = proto.NewHelloServiceClient(conn)
 
 	for {
 		fmt.Println("1: send Request")
@@ -55,7 +55,7 @@ func sendRequest() {
 	scanner.Scan()
 	name := scanner.Text()
 
-	req := &hellopb.HelloRequest{
+	req := &proto.HelloRequest{
 		Name: name,
 	}
 
