@@ -1,7 +1,7 @@
 package main
 
 import (
-	"awesomeProject/pkg/proto"
+	proto "awesomeProject/pkg/proto/api"
 	"context"
 	"fmt"
 	"google.golang.org/grpc"
@@ -34,6 +34,8 @@ func (s *HelloServiceServer) HelloServerStream(req *proto.HelloRequest, stream p
 
 		time.Sleep(1 * time.Second)
 	}
+
+	// ストリームの終了
 	return nil
 }
 

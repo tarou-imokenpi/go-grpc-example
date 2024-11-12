@@ -1,12 +1,14 @@
 package main
 
 import (
-	"awesomeProject/pkg/proto"
+	proto "awesomeProject/pkg/proto/api"
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"io"
 	"log"
 	"os"
 )
@@ -34,7 +36,8 @@ func main() {
 
 	for {
 		fmt.Println("1: send Request")
-		fmt.Println("2: exit")
+		fmt.Println("2: server stream Request")
+		fmt.Println("3: exit")
 		fmt.Print("Enter command number: ")
 
 		scanner.Scan()
@@ -44,9 +47,41 @@ func main() {
 		case "1":
 			sendRequest()
 		case "2":
+			ServerStreamRequest()
+		case "3":
 			fmt.Println("bye.")
 			return
 		}
+	}
+}
+
+func ServerStreamRequest() {
+	fmt.Println("Enter your name: ")
+	scanner.Scan()
+	name := scanner.Text()
+
+	req := &proto.HelloRequest{
+		Name: name,
+	}
+
+	stream, err := client.HelloServerStream(context.Background(), req)
+	if err != nil {
+		fmt.Println("Error: ", err)
+		return
+	}
+
+	for {
+		res, err := stream.Recv()
+		if errors.Is(err, io.EOF) {
+			fmt.Println("stream closed")
+			break
+		}
+
+		if err != nil {
+			fmt.Println("Error: ", err)
+		}
+
+		fmt.Println("Response: ", res)
 	}
 }
 
