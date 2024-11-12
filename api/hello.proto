@@ -5,8 +5,9 @@ option go_package = "pkg/proto";
 
 service HelloService {
   rpc SayHello (HelloRequest) returns (HelloReply) {}
-
   rpc HelloServerStream (HelloRequest) returns (stream HelloReply) {}
+  rpc HelloClientStream (stream HelloRequest) returns (HelloReply) {}
+  rpc HelloBidiStream (stream HelloRequest) returns (stream HelloReply) {}
 }
 
 message HelloRequest {

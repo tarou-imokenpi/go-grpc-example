@@ -1,7 +1,7 @@
 package main
 
 import (
-	proto "awesomeProject/pkg/proto/api"
+	hello "awesomeProject/pkg/proto/api"
 	"bufio"
 	"context"
 	"errors"
@@ -15,7 +15,7 @@ import (
 
 var (
 	scanner *bufio.Scanner
-	client  proto.HelloServiceClient
+	client  hello.HelloServiceClient
 )
 
 func main() {
@@ -32,12 +32,13 @@ func main() {
 	}
 	defer conn.Close()
 
-	client = proto.NewHelloServiceClient(conn)
+	client = hello.NewHelloServiceClient(conn)
 
 	for {
 		fmt.Println("1: send Request")
 		fmt.Println("2: server stream Request")
-		fmt.Println("3: exit")
+		fmt.Println("3: client stream Request")
+		fmt.Println("4: exit")
 		fmt.Print("Enter command number: ")
 
 		scanner.Scan()
@@ -49,10 +50,41 @@ func main() {
 		case "2":
 			ServerStreamRequest()
 		case "3":
+			ClientStreamRequest()
+		case "4":
 			fmt.Println("bye.")
 			return
 		}
 	}
+}
+
+func ClientStreamRequest() {
+	stream, err := client.HelloClientStream(context.Background())
+	if err != nil {
+		fmt.Println("Error: ", err)
+		return
+	}
+
+	sendCount := 10
+	for i := 0; i < sendCount; i++ {
+
+		name := fmt.Sprintf("name%d", i)
+
+		if err := stream.Send(&hello.HelloRequest{
+			Name: name,
+		}); err != nil {
+			fmt.Println("Error: ", err)
+			return
+		}
+	}
+
+	res, err := stream.CloseAndRecv()
+	if err != nil {
+		fmt.Println("Error: ", err)
+		return
+	}
+
+	fmt.Println("Response: ", res.GetMessage())
 }
 
 func ServerStreamRequest() {
@@ -60,7 +92,7 @@ func ServerStreamRequest() {
 	scanner.Scan()
 	name := scanner.Text()
 
-	req := &proto.HelloRequest{
+	req := &hello.HelloRequest{
 		Name: name,
 	}
 
@@ -90,7 +122,7 @@ func sendRequest() {
 	scanner.Scan()
 	name := scanner.Text()
 
-	req := &proto.HelloRequest{
+	req := &hello.HelloRequest{
 		Name: name,
 	}
 

@@ -1,11 +1,13 @@
 package main
 
 import (
-	proto "awesomeProject/pkg/proto/api"
+	hello "awesomeProject/pkg/proto/api"
 	"context"
+	"errors"
 	"fmt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -14,19 +16,19 @@ import (
 )
 
 type HelloServiceServer struct {
-	proto.UnimplementedHelloServiceServer
+	hello.UnimplementedHelloServiceServer
 }
 
-func (s *HelloServiceServer) SayHello(ctx context.Context, req *proto.HelloRequest) (*proto.HelloReply, error) {
-	return &proto.HelloReply{
+func (s *HelloServiceServer) SayHello(ctx context.Context, req *hello.HelloRequest) (*hello.HelloReply, error) {
+	return &hello.HelloReply{
 		Message: fmt.Sprintf("Hello %s", req.GetName()),
 	}, nil
 }
 
-func (s *HelloServiceServer) HelloServerStream(req *proto.HelloRequest, stream proto.HelloService_HelloServerStreamServer) error {
+func (s *HelloServiceServer) HelloServerStream(req *hello.HelloRequest, stream hello.HelloService_HelloServerStreamServer) error {
 	resCount := 10
 	for i := 0; i < resCount; i++ {
-		if err := stream.Send(&proto.HelloReply{
+		if err := stream.Send(&hello.HelloReply{
 			Message: fmt.Sprintf("Hello %s %d", req.GetName(), i),
 		}); err != nil {
 			return err
@@ -37,6 +39,28 @@ func (s *HelloServiceServer) HelloServerStream(req *proto.HelloRequest, stream p
 
 	// ストリームの終了
 	return nil
+}
+
+func (s *HelloServiceServer) HelloClientStream(stream hello.HelloService_HelloClientStreamServer) error {
+	nameList := make([]string, 0)
+
+	for {
+		req, err := stream.Recv()
+
+		// クライアントからのリクエストをすべて受け取ったとき
+		// クライアントに名前のリストを返す
+		if errors.Is(err, io.EOF) {
+			message := fmt.Sprintf("Hello %v", nameList)
+			return stream.SendAndClose(&hello.HelloReply{
+				Message: message,
+			})
+		}
+		if err != nil {
+			return err
+		}
+
+		nameList = append(nameList, req.GetName())
+	}
 }
 
 func NewHelloServiceServer() *HelloServiceServer {
@@ -52,13 +76,16 @@ func main() {
 
 	s := grpc.NewServer()
 
-	proto.RegisterHelloServiceServer(s, NewHelloServiceServer())
+	hello.RegisterHelloServiceServer(s, NewHelloServiceServer())
 
 	reflection.Register(s)
 
 	go func() {
 		log.Printf("Server started on port %d", port)
-		s.Serve(listener)
+		err := s.Serve(listener)
+		if err != nil {
+			return
+		}
 	}()
 
 	quit := make(chan os.Signal, 1)

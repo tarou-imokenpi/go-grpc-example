@@ -21,6 +21,8 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	HelloService_SayHello_FullMethodName          = "/hello.HelloService/SayHello"
 	HelloService_HelloServerStream_FullMethodName = "/hello.HelloService/HelloServerStream"
+	HelloService_HelloClientStream_FullMethodName = "/hello.HelloService/HelloClientStream"
+	HelloService_HelloBidiStream_FullMethodName   = "/hello.HelloService/HelloBidiStream"
 )
 
 // HelloServiceClient is the client API for HelloService service.
@@ -29,6 +31,8 @@ const (
 type HelloServiceClient interface {
 	SayHello(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (*HelloReply, error)
 	HelloServerStream(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[HelloReply], error)
+	HelloClientStream(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[HelloRequest, HelloReply], error)
+	HelloBidiStream(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[HelloRequest, HelloReply], error)
 }
 
 type helloServiceClient struct {
@@ -68,12 +72,40 @@ func (c *helloServiceClient) HelloServerStream(ctx context.Context, in *HelloReq
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type HelloService_HelloServerStreamClient = grpc.ServerStreamingClient[HelloReply]
 
+func (c *helloServiceClient) HelloClientStream(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[HelloRequest, HelloReply], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &HelloService_ServiceDesc.Streams[1], HelloService_HelloClientStream_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[HelloRequest, HelloReply]{ClientStream: stream}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type HelloService_HelloClientStreamClient = grpc.ClientStreamingClient[HelloRequest, HelloReply]
+
+func (c *helloServiceClient) HelloBidiStream(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[HelloRequest, HelloReply], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &HelloService_ServiceDesc.Streams[2], HelloService_HelloBidiStream_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[HelloRequest, HelloReply]{ClientStream: stream}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type HelloService_HelloBidiStreamClient = grpc.BidiStreamingClient[HelloRequest, HelloReply]
+
 // HelloServiceServer is the server API for HelloService service.
 // All implementations must embed UnimplementedHelloServiceServer
 // for forward compatibility.
 type HelloServiceServer interface {
 	SayHello(context.Context, *HelloRequest) (*HelloReply, error)
 	HelloServerStream(*HelloRequest, grpc.ServerStreamingServer[HelloReply]) error
+	HelloClientStream(grpc.ClientStreamingServer[HelloRequest, HelloReply]) error
+	HelloBidiStream(grpc.BidiStreamingServer[HelloRequest, HelloReply]) error
 	mustEmbedUnimplementedHelloServiceServer()
 }
 
@@ -89,6 +121,12 @@ func (UnimplementedHelloServiceServer) SayHello(context.Context, *HelloRequest) 
 }
 func (UnimplementedHelloServiceServer) HelloServerStream(*HelloRequest, grpc.ServerStreamingServer[HelloReply]) error {
 	return status.Errorf(codes.Unimplemented, "method HelloServerStream not implemented")
+}
+func (UnimplementedHelloServiceServer) HelloClientStream(grpc.ClientStreamingServer[HelloRequest, HelloReply]) error {
+	return status.Errorf(codes.Unimplemented, "method HelloClientStream not implemented")
+}
+func (UnimplementedHelloServiceServer) HelloBidiStream(grpc.BidiStreamingServer[HelloRequest, HelloReply]) error {
+	return status.Errorf(codes.Unimplemented, "method HelloBidiStream not implemented")
 }
 func (UnimplementedHelloServiceServer) mustEmbedUnimplementedHelloServiceServer() {}
 func (UnimplementedHelloServiceServer) testEmbeddedByValue()                      {}
@@ -140,6 +178,20 @@ func _HelloService_HelloServerStream_Handler(srv interface{}, stream grpc.Server
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type HelloService_HelloServerStreamServer = grpc.ServerStreamingServer[HelloReply]
 
+func _HelloService_HelloClientStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(HelloServiceServer).HelloClientStream(&grpc.GenericServerStream[HelloRequest, HelloReply]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type HelloService_HelloClientStreamServer = grpc.ClientStreamingServer[HelloRequest, HelloReply]
+
+func _HelloService_HelloBidiStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(HelloServiceServer).HelloBidiStream(&grpc.GenericServerStream[HelloRequest, HelloReply]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type HelloService_HelloBidiStreamServer = grpc.BidiStreamingServer[HelloRequest, HelloReply]
+
 // HelloService_ServiceDesc is the grpc.ServiceDesc for HelloService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -157,6 +209,17 @@ var HelloService_ServiceDesc = grpc.ServiceDesc{
 			StreamName:    "HelloServerStream",
 			Handler:       _HelloService_HelloServerStream_Handler,
 			ServerStreams: true,
+		},
+		{
+			StreamName:    "HelloClientStream",
+			Handler:       _HelloService_HelloClientStream_Handler,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "HelloBidiStream",
+			Handler:       _HelloService_HelloBidiStream_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
 		},
 	},
 	Metadata: "api/hello.proto",
